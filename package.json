@@ -17,7 +17,7 @@
     "lint": "eslint --ext .ts,.js bin lib specs",
     "format": "prettier --write lib specs",
     "test": "nyc mocha",
-    "clean": "rm -rf dist docs",
+    "clean": "rimraf dist docs",
     "generate-docs": "typedoc",
     "build": "tsc",
     "prepack": "yarn clean && yarn build"
@@ -61,6 +61,7 @@
     "mocha": "10.2.0",
     "nyc": "15.1.0",
     "prettier": "2.8.8",
+    "rimraf": "^5.0.5",
     "sinon": "15.1.0",
     "ts-node": "10.9.1",
     "typedoc": "0.24.7",
