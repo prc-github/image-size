@@ -20,7 +20,8 @@
     "clean": "rm -rf dist docs",
     "generate-docs": "typedoc",
     "build": "tsc",
-    "prepack": "yarn clean && yarn build"
+    "prepack": "yarn clean && yarn build",
+    "postinstall": "yarn build"
   },
   "keywords": [
     "image",
