@@ -1,3 +1,5 @@
+/* eslint-disable max-statements */
+/* eslint-disable linebreak-style */
 // NOTE: we only support baseline and progressive JPGs here
 // due to the structure of the loader class, we only get a buffer
 // with a maximum size of 4096 bytes. so if the SOF marker is outside
@@ -28,19 +30,9 @@ function extractSize(input: Uint8Array, index: number): ISize {
   }
 }
 
-function extractOrientation(exifBlock: Uint8Array, isBigEndian: boolean) {
-  // TODO: assert that this contains 0x002A
-  // let STATIC_MOTOROLA_TIFF_HEADER_BYTES = 2
-  // let TIFF_IMAGE_FILE_DIRECTORY_BYTES = 4
-
-  // TODO: derive from TIFF_IMAGE_FILE_DIRECTORY_BYTES
-  const idfOffset = 8
-
-  // IDF osset works from right after the header bytes
-  // (so the offset includes the tiff byte align)
-  const offset = EXIF_HEADER_BYTES + idfOffset
-
-  const idfDirectoryEntries = readUInt(exifBlock, 16, offset, isBigEndian)
+function extractOrientationFromOffset(exifBlock: Uint8Array, idfDirectoryEntries: number, offset: number, isBigEndian: boolean) {
+  let exifOffset : number | undefined = undefined
+  let orientation : number | undefined = undefined
 
   for (
     let directoryEntryNumber = 0;
@@ -55,7 +47,7 @@ function extractOrientation(exifBlock: Uint8Array, isBigEndian: boolean) {
 
     // Skip on corrupt EXIF blocks
     if (start > exifBlock.length) {
-      return
+      return [undefined, undefined]
     }
 
     const block = exifBlock.slice(start, end)
@@ -65,19 +57,48 @@ function extractOrientation(exifBlock: Uint8Array, isBigEndian: boolean) {
     if (tagNumber === 274) {
       const dataFormat = readUInt(block, 16, 2, isBigEndian)
       if (dataFormat !== 3) {
-        return
+        return [undefined, undefined]
       }
 
       // unsinged int has 2 bytes per component
       // if there would more than 4 bytes in total it's a pointer
       const numberOfComponents = readUInt(block, 32, 4, isBigEndian)
       if (numberOfComponents !== 1) {
-        return
+        return [undefined, undefined]
       }
 
-      return readUInt(block, 16, 8, isBigEndian)
+      orientation = readUInt(block, 16, 8, isBigEndian)
+    } else if (tagNumber == 34665) { // Exif Offset
+      exifOffset = readUInt(block, 32, 8, isBigEndian) 
     }
+  }  
+
+  return [orientation, exifOffset]
+}
+
+function extractOrientation(exifBlock: Uint8Array, isBigEndian: boolean) {
+  // Constants defined...
+  const idfOffset = 8
+  let offset = EXIF_HEADER_BYTES + idfOffset
+
+  let idfDirectoryEntries = readUInt(exifBlock, 16, offset, isBigEndian)
+
+  let orientation: number | undefined
+  let exifOffset: number | undefined;
+  
+  [orientation, exifOffset] = extractOrientationFromOffset(exifBlock, idfDirectoryEntries, offset, isBigEndian)
+
+  if (!orientation && exifOffset) {
+    offset = exifOffset + EXIF_HEADER_BYTES
+    idfDirectoryEntries = readUInt(exifBlock, 16, offset, isBigEndian);
+    [orientation, exifOffset] = extractOrientationFromOffset(exifBlock, idfDirectoryEntries, offset, isBigEndian)
   }
+
+  if (!orientation) {
+    orientation = 0
+  }
+
+  return orientation
 }
 
 function validateExifBlock(input: Uint8Array, index: number) {
