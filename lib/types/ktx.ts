@@ -2,18 +2,10 @@ import type { IImage } from './interface'
 import { toUTF8String, readUInt32LE } from './utils'
 
 export const KTX: IImage = {
-  validate: (input) => {
-    const signature = toUTF8String(input, 1, 7)
-    return ['KTX 11', 'KTX 20'].includes(signature)
-  },
+  validate: (input) => toUTF8String(input, 1, 7) === 'KTX 11',
 
-  calculate: (input) => {
-    const type = input[5] === 0x31 ? 'ktx' : 'ktx2'
-    const offset = type === 'ktx' ? 36 : 20
-    return ({
-      height: readUInt32LE(input, offset + 4),
-      width: readUInt32LE(input, offset),
-      type,
-    })
-  },
+  calculate: (input) => ({
+    height: readUInt32LE(input, 40),
+    width: readUInt32LE(input, 36),
+  }),
 }

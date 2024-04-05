@@ -3,9 +3,8 @@ version: 2.1
 commands:
   build:
     steps:
-      - checkout
-      - run: corepack enable && corepack prepare --activate
       - run: node --version && yarn --version
+      - checkout
       - restore_cache:
           keys:
             - yarn-{{ checksum "yarn.lock" }}
