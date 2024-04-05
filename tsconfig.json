@@ -9,7 +9,8 @@
     "removeComments": false,
     "strict": true,
     "alwaysStrict": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "esModuleInterop": true
   },
   "include": [
     "lib/**/*"
@@ -18,7 +19,9 @@
     "excludeExternals": true,
     "excludePrivate": true,
     "excludeProtected": true,
-    "entryPoints": ["lib/index.ts"],
+    "entryPoints": [
+      "lib/index.ts"
+    ],
     "out": "docs"
   }
 }

@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { sync as globSync } from 'glob'
-import { extname, resolve } from 'path'
+import path, { extname, resolve } from 'path';
 import { openSync, readSync } from 'fs'
 import { imageSize } from '../lib'
 import { detector } from '../lib/detector'
@@ -110,6 +110,7 @@ describe('Valid images', () => {
 
   validFiles.forEach((file) =>
     describe(file, () => {
+      file = file.split(path.sep).join('/');
       let type: string | undefined
       let bufferDimensions: ISizeCalculationResult
       let asyncDimensions: ISizeCalculationResult
