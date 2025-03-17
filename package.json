@@ -1,6 +1,6 @@
 {
   "name": "image-size",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "get dimensions of any image file",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,7 +20,8 @@
     "clean": "rimraf dist docs",
     "generate-docs": "typedoc",
     "build": "tsc",
-    "prepack": "yarn clean && yarn build"
+    "prepack": "yarn clean && yarn build",
+    "sample": "ts-node test.ts"
   },
   "keywords": [
     "image",

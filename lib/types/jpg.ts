@@ -77,9 +77,9 @@ function extractOrientationFromOffset(exifBlock: Uint8Array, idfDirectoryEntries
 }
 
 function extractOrientation(exifBlock: Uint8Array, isBigEndian: boolean) {
-  // Constants defined...
-  const idfOffset = 8
-  let offset = EXIF_HEADER_BYTES + idfOffset
+  const tiffHeaderOffset = 4 // endianness and magic number
+
+  let offset = readUInt(exifBlock, 32, tiffHeaderOffset + EXIF_HEADER_BYTES, isBigEndian) + EXIF_HEADER_BYTES
 
   let idfDirectoryEntries = readUInt(exifBlock, 16, offset, isBigEndian)
 
@@ -121,27 +121,43 @@ function validateExifBlock(input: Uint8Array, index: number) {
   }
 }
 
-function validateInput(input: Uint8Array, index: number): void {
-  // index should be within buffer limits
-  if (index > input.length) {
-    throw new TypeError('Corrupt JPG, exceeded buffer limits')
-  }
-  // Every JPEG block must begin with a 0xFF
-  if (input[index] !== 0xff) {
-    throw new TypeError('Invalid JPG, marker table corrupted')
-  }
-}
-
 export const JPG: IImage = {
   validate: (input) => toHexString(input, 0, 2) === 'ffd8',
 
   calculate(input) {
-    // Skip 4 chars, they are for signature
-    input = input.slice(4)
+    if (!this.validate(input)) {
+      throw new TypeError('Invalid JPG, no SOI marker found!')      
+    }
+    input = input.slice(2)
 
-    let orientation: number | undefined
-    let next: number
+    let orientation: number | undefined = undefined
+    let width: number | undefined = undefined
+    let height: number | undefined = undefined
     while (input.length) {
+      const marker = toHexString(input, 0, 1)
+      const isValidMarker = marker === 'ff'
+
+      if (!isValidMarker) {
+        throw new TypeError('Invalid JPG, marker table corrupted')
+      }
+
+      // 0xFFC0 is baseline standard(SOF)
+      // 0xFFC1 is baseline optimized(SOF)
+      // 0xFFC2 is progressive(SOF2)
+      const next = toHexString(input, 1, 2)
+      if (next === 'c0' || next === 'c1' || next === 'c2') {
+        const size = extractSize(input, 5)
+
+        width = size.width
+        height = size.height
+      }      
+      // 0xFFDA signifies the beginning of the image data
+      if (next === 'da') {
+        break
+      }
+
+      input = input.slice(2)
+
       // read length of the next block
       const i = readUInt16BE(input, 0)
 
@@ -149,32 +165,26 @@ export const JPG: IImage = {
         orientation = validateExifBlock(input, i)
       }
 
-      // ensure correct format
-      validateInput(input, i)
-
-      // 0xFFC0 is baseline standard(SOF)
-      // 0xFFC1 is baseline optimized(SOF)
-      // 0xFFC2 is progressive(SOF2)
-      next = input[i + 1]
-      if (next === 0xc0 || next === 0xc1 || next === 0xc2) {
-        const size = extractSize(input, i + 5)
-
-        // TODO: is orientation=0 a valid answer here?
-        if (!orientation) {
-          return size
-        }
-
+      if (width !== undefined && height !== undefined && orientation !== undefined) {
         return {
-          height: size.height,
+          height: height,
           orientation,
-          width: size.width,
+          width: width,
         }
       }
 
+      if (i > input.length) {
+        throw new TypeError('Corrupt JPG, exceeded buffer limits')
+      }
+
       // move to the next block
-      input = input.slice(i + 2)
+      input = input.slice(i)
     }
 
-    throw new TypeError('Invalid JPG, no size found')
+    return {
+      height: height,
+      orientation,
+      width: width,
+    }    
   },
 }
